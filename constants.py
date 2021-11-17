@@ -11,3 +11,4 @@ IE = (q ** 2) / (2 * np.pi * hbar)
 kT = .025
 zplus = complex(0, 1e-12)
 dE = energy[1] - energy[0]
+voltage = np.arange(0, 2.001, 0.001)

@@ -8,7 +8,7 @@ from constants import *
 
 
 def get_voltage(w: int, b1: int, b2: int) -> np.ndarray:
-    dif = 0.15 * (w + b1 + b2 - 10)
+    dif = 0.15 * (w + b1 + b2 - 30)
     if 2 - dif >= 0.75:
         return np.arange(0, 2 - dif + 0.001, 0.001)
     else:
