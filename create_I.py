@@ -7,12 +7,12 @@ import numpy.linalg as ln
 from constants import *
 
 
-def get_voltage(w: int, b1: int, b2: int) -> np.ndarray:
-    dif = 0.15 * (w + b1 + b2 - 30)
-    if 2 - dif >= 0.75:
-        return np.arange(0, 2 - dif + 0.001, 0.001)
+def get_voltage(w: int) -> np.ndarray:
+    dif = 0.09 * (10 - w)
+    if 1.6 - dif >= 0.8:
+        return np.arange(0, 1.6 - dif + 0.001, 0.001)
     else:
-        return np.arange(0, 0.751, 0.001)
+        return np.arange(0, 0.801, 0.001)
 
 
 def create_I(w: int, b1: int, b2: int) -> List[float]:
@@ -29,7 +29,7 @@ def create_I(w: int, b1: int, b2: int) -> List[float]:
     T = 2 * t0 * np.diag(np.ones(Np), 0) + (-t0 * np.diag(np.ones(Np - 1), 1)) + \
         (-t0 * np.diag(np.ones(Np - 1), -1))
     T += np.diag(UB.T[0], 0)
-    VV = get_voltage(w, b1, b2)
+    VV = get_voltage(w)
     II = []
     sig1 = np.zeros((Np, Np), dtype=complex)
     sig2 = np.zeros((Np, Np), dtype=complex)

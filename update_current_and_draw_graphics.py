@@ -25,9 +25,9 @@ def draw_graphic(
     elif flag and w and b1 and b2 and not max_point:
         plt.title(f'Нормализованный отрезок ВАХ (в 15% от пика) (w={w}, b1={b1}, b2={b2})нм')
     if max_point:
-        plt.plot(v[max_point], i[max_point], 'x', label=f'Пик (U={round(v[max_point], 4)})')
+        plt.plot(v[max_point], i[max_point], 'x', color='red', label=f'Пик (U={round(v[max_point], 4)})')
     if point_15:
-        plt.plot(v[point_15], i[point_15], 'x', label='15% от пика')
+        plt.plot(v[point_15], i[point_15], 'x', color='green', label='15% от пика')
     if max_point or point_15:
         plt.legend()
     plt.grid()

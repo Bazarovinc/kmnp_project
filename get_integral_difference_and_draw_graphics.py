@@ -12,7 +12,7 @@ from csv import reader
 def draw_graphics(
         current: np.ndarray,
         v: np.ndarray,
-        cube_i: np.ndarray,
+        need_current: np.ndarray,
         w: int,
         b1: int,
         b2: int,
@@ -20,7 +20,7 @@ def draw_graphics(
         depend_type: str
 ) -> None:
     plt.plot(v, current)
-    plt.plot(v, cube_i, label=depend_type)
+    plt.plot(v, need_current, color='red', label=depend_type)
     plt.title(f'ВАХ ДБКС с (w={w}, b1={b1}, b2={b2})нм (s={round(s, 4)})')
     plt.xlabel('U')
     plt.ylabel('I')
