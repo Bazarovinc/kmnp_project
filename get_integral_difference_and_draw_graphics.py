@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
 import numpy as np
 from matplotlib import pyplot as plt
@@ -6,7 +6,15 @@ import plotly.graph_objects as go
 
 from constants import voltage
 from utils import normalize_data
-from csv import reader
+from pydantic import BaseModel
+
+
+class DiffModel(BaseModel):
+    diff: float
+    diff_type: str
+    w: int
+    b1: int
+    b2: int
 
 
 def draw_graphics(
@@ -16,12 +24,13 @@ def draw_graphics(
         w: int,
         b1: int,
         b2: int,
-        s: float,
-        depend_type: str
+        depend_type: str,
+        s: Optional[float] = None
 ) -> None:
     plt.plot(v, current)
     plt.plot(v, need_current, color='red', label=depend_type)
-    plt.title(f'ВАХ ДБКС с (w={w}, b1={b1}, b2={b2})нм (s={round(s, 4)})')
+    #plt.title(f'ВАХ ДБКС с (w={w}, b1={b1}, b2={b2})нм (s={round(s, 4)})')
+    plt.title(f'ВАХ ДБКС с (w={w}, b1={b1}, b2={b2})нм')
     plt.xlabel('U')
     plt.ylabel('I')
     plt.legend()
@@ -119,15 +128,20 @@ def sort_lists(
     return np.array(new_s), np.array(new_w), np.array(new_b1), np.array(new_b2)
 
 
+def dif(current_1: np.ndarray, current_2: np.ndarray) -> float:
+    return np.abs(np.sum(np.abs(current_1 - current_2)))
+
+
 def get_integral_difference(
         rows: list,
         depend_type: str,
         depend_func
-):
+) -> Tuple[DiffModel, DiffModel]:
     w_list = []
     b1_list = []
     b2_list = []
     s_dict = {}
+    diff_dict = {}
     i = 0
     for row in rows:
         w = int(float(row[0]))
@@ -139,11 +153,27 @@ def get_integral_difference(
         current = np.array(row[3:], dtype='float')
         n_voltage = normalize_data(voltage[:len(current)])
         n_current = depend_func(n_voltage)
+        diff_dict[i] = dif(current, n_current)
         s_dict[i] = np.abs(simpson(current, len(current)) - simpson(n_current, len(n_current)))
-        draw_graphics(current, n_voltage, n_current, w, b1, b2, s_dict[i], depend_type)
+        draw_graphics(current, n_voltage, n_current, w, b1, b2, depend_type)
         i += 1
     s_sorted, w_sorted, b1_sorted, b2_sorted = sort_lists(s_dict, w_list, b1_list, b2_list)
-    draw_3d(w_sorted, b1_sorted, s_sorted, depend_type, 'w', 'b1')
-    draw_3d(w_sorted, b2_sorted, s_sorted, depend_type, 'w', 'b2')
-    draw_3d(b1_sorted, b2_sorted, s_sorted, depend_type, 'b1', 'b2')
-    return s_sorted, w_sorted, b1_sorted, b2_sorted
+    s_diff = DiffModel(
+        diff=s_sorted[0],
+        diff_type='Интегральная разность',
+        w=w_sorted[0],
+        b1=b1_sorted[0],
+        b2=b2_sorted[0]
+    )
+    diff_sorted, w_sorted, b1_sorted, b2_sorted = sort_lists(diff_dict, w_list, b1_list, b2_list)
+    diff = DiffModel(
+        diff=diff_sorted[0],
+        diff_type='Сумма разностей',
+        w=w_sorted[0],
+        b1=b1_sorted[0],
+        b2=b2_sorted[0]
+    )
+    # draw_3d(w_sorted, b1_sorted, s_sorted, depend_type, 'w', 'b1')
+    # draw_3d(w_sorted, b2_sorted, s_sorted, depend_type, 'w', 'b2')
+    # draw_3d(b1_sorted, b2_sorted, s_sorted, depend_type, 'b1', 'b2')
+    return s_diff, diff
