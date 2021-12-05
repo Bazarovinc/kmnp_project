@@ -173,6 +173,15 @@ def get_integral_difference(
         b1=b1_sorted[0],
         b2=b2_sorted[0]
     )
+    # new = []
+    # b1_l = []
+    # for i in range(len(w_sorted)):
+    #     if w_sorted[i] == 10:
+    #         new.append(i)
+    # s_sorted_10 = s_sorted[new]
+    # b1_sorted_10 = b1_sorted[new]
+    # b2_sorted_10 = b2_sorted[new]
+    # draw_3d(b2_sorted_10, b1_sorted_10, s_sorted_10, depend_type, 'b2', 'b1')
     # draw_3d(w_sorted, b1_sorted, s_sorted, depend_type, 'w', 'b1')
     # draw_3d(w_sorted, b2_sorted, s_sorted, depend_type, 'w', 'b2')
     # draw_3d(b1_sorted, b2_sorted, s_sorted, depend_type, 'b1', 'b2')

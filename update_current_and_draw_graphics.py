@@ -43,17 +43,22 @@ def draw_graphic(
 
 
 def find_end_point(min_point: float, max_point: float, array: np.ndarray) -> float:
-    half = (max_point - min_point) * 0.75
+    half = (max_point - min_point) * 0.6
     point = (np.abs(array - (min_point + half))).argmin()
     return array[point]
+
+
+def get_15_point(vector: np.ndarray, max_point: float) -> float:
+    return vector[(np.abs(vector - (max_point * 0.85))).argmin()]
 
 
 if __name__ == '__main__':
     writer = csv.writer(open('data_sets/normalized_current.csv', 'w'))
     with open('data_sets/params_current.csv', 'r') as f:
         reader = csv.reader(f)
+        i = 0
         for row in reader:
-            voltage = np.arange(0, 2.001, 0.001)
+            voltage = np.arange(0, 2.501, 0.001)
             w = int(float(row[0]))
             b1 = int(float(row[1]))
             b2 = int(float(row[2]))
@@ -61,21 +66,28 @@ if __name__ == '__main__':
             end = len(current)
             draw_graphic(voltage[:end], current, w, b1, b2)
             min_points, max_points = get_min_max_points(current)
+            # plt.plot(v, current)
+            # plt.plot(v[max_points], current[max_points], 'x', color='red')
+            # plt.plot(v[min_points], current[min_points],'x' , color='green')
+            # plt.grid()
+            # plt.savefig(f'pictures/test/{w}_{b1}_{b2}.jpg')
+            # plt.show()
             min_point = min_points[1]
             max_point = max_points[0]
             end_value = find_end_point(
                 current[min_point],
                 current[max_point],
-                current[min_point:]
+                current[min_point:max_points[1]]
             )
             end_point = np.where(current == end_value)
             if end_point[0] < len(current):
                 current = current[:int(end_point[0]) + 1]
                 voltage = voltage[:int(end_point[0]) + 1]
-            point_15 = int(round(0.85 * max_point, 0))
+            point_15 = int(np.where(current == get_15_point(current[:max_point + 1], current[max_point]))[0])
             draw_graphic(voltage, current, w, b1, b2, max_point, point_15)
             normalized_current = normalize_data(current[0:point_15])
             normalized_voltage = normalize_data(voltage[0:point_15])
             draw_graphic(normalized_voltage, normalized_current, w, b1, b2, flag=True)
             writer.writerow(np.concatenate((np.array([w, b1, b2]), normalized_current)))
+            i += 1
 

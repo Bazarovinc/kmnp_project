@@ -9,15 +9,15 @@ from create_I import create_I
 #E = np.arange(0, 2.001, 0.001)
 
 if __name__ == '__main__':
-    f_o_i = open('data_sets/params_current.csv', 'a')
+    f_o_i = open('data_sets/params_current_1.csv', 'a')
     writer_i = csv.writer(f_o_i)
     i = 0
     start = datetime.now()
-    s = 11
-    s1 = 10
-    for w in range(17, 21):
-        for b1 in range(s, 21):
-            for b2 in range(s1, 21):
+    s = 1
+    s1 = 1
+    for w in range(1, 11):
+        for b1 in range(s, 11):
+            for b2 in range(s1, 11):
                 s_i = datetime.now()
                 if b1 + 1 == b2 or b2 + 1 == b1 or b1 == b2:
                     continue

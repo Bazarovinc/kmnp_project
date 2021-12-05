@@ -8,7 +8,7 @@ from constants import *
 
 
 def get_voltage(w: int) -> np.ndarray:
-    dif = 0.09 * (10 - w)
+    dif = 0.09 * (w - 10)
     if 1.6 - dif >= 0.8:
         return np.arange(0, 1.6 - dif + 0.001, 0.001)
     else:
@@ -29,7 +29,7 @@ def create_I(w: int, b1: int, b2: int) -> List[float]:
     T = 2 * t0 * np.diag(np.ones(Np), 0) + (-t0 * np.diag(np.ones(Np - 1), 1)) + \
         (-t0 * np.diag(np.ones(Np - 1), -1))
     T += np.diag(UB.T[0], 0)
-    VV = get_voltage(w)
+    VV = voltage
     II = []
     sig1 = np.zeros((Np, Np), dtype=complex)
     sig2 = np.zeros((Np, Np), dtype=complex)
