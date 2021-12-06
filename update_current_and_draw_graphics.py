@@ -1,10 +1,13 @@
-import csv
-from typing import Optional
+import csv  # библиотека для чтения/записи в файлы с расширением .csv
+from typing import Optional  # библиотека подсказок типов
 
-import matplotlib.pyplot as plt
-import numpy as np
-
+import matplotlib.pyplot as plt  # библиотека для построения графиков (в данном случае двумерных)
+import numpy as np  # библиотека работающая с векторами
+# импорт функции для получения точек минимумов и максимумов и функции для нормализации вектора
 from utils import get_min_max_points, normalize_data
+
+# инициализация вектора со значениями напряжения
+voltage = np.arange(0, 2.501, 0.001)
 
 
 def draw_graphic(
@@ -17,77 +20,90 @@ def draw_graphic(
         point_15: Optional[int] = None,
         flag: bool = False,
 ) -> None:
-    plt.plot(v, i)
+    """Функция для построения графика ВАХ"""
+    plt.plot(v, i)  # построение графиика ВАХ
+    # подпись графика (названия)
     if w and b1 and b2 and max_point:
         plt.title(f'ВАХ (w={w}, b1={b1}, b2={b2})нм')
     elif not flag and w and b1 and b2 and not max_point:
         plt.title(f'Изначальный график ВАХ (w={w}, b1={b1}, b2={b2})нм')
     elif flag and w and b1 and b2 and not max_point:
         plt.title(f'Нормализованный отрезок ВАХ (в 15% от пика) (w={w}, b1={b1}, b2={b2})нм')
+    # отмечаем пиковое значение тока на графике ВАХ
     if max_point:
         plt.plot(v[max_point], i[max_point], 'x', color='red', label=f'Пик (U={round(v[max_point], 4)})')
+    # отмечаем точку в 15% от пика
     if point_15:
         plt.plot(v[point_15], i[point_15], 'x', color='green', label='15% от пика')
+    # отображние подписей на графике
     if max_point or point_15:
         plt.legend()
-    plt.grid()
-    plt.xlabel('U')
-    plt.ylabel('I')
+    plt.grid()   # включеиние сетки
+    plt.xlabel('U')  # подпись оси абцисс
+    plt.ylabel('I')  # подпись оси ординат
+    # сохранение графика
     if w and b1 and b2 and max_point and point_15:
         plt.savefig(f'pictures/cvc/{w}_{b1}_{b2}.jpg')
     elif not flag and w and b1 and b2 and not max_point:
         plt.savefig(f'pictures/cvc_before/{w}_{b1}_{b2}.jpg')
     elif flag and w and b1 and b2 and not max_point:
         plt.savefig(f'pictures/normalized_cvc/{w}_{b1}_{b2}.jpg')
-    plt.show()
+    plt.show()  # отображение графика
 
 
 def find_end_point(min_point: float, max_point: float, array: np.ndarray) -> float:
+    """Функция для нахождения конечного значения тока, чтобы в дальнейшем обрезать график.
+    Нужная для построения красивого графика ВАХ"""
     half = (max_point - min_point) * 0.6
     point = (np.abs(array - (min_point + half))).argmin()
     return array[point]
 
 
-def get_15_point(vector: np.ndarray, max_point: float) -> float:
-    return vector[(np.abs(vector - (max_point * 0.85))).argmin()]
+def get_15_point(current: np.ndarray, max_point: float) -> float:
+    """Функция для нахождения значения тока, лежашей в 15% слева от пикового значения тока"""
+    return current[(np.abs(current - (max_point * 0.85))).argmin()]
 
 
 if __name__ == '__main__':
+    # инициализация класса записывающего данные в файл .csv
     writer = csv.writer(open('data_sets/normalized_current.csv', 'w'))
+    # контекстный менеджер для открытия и автоматического закрытия файла по выходу из вложенности
     with open('data_sets/params_current.csv', 'r') as f:
+        # инициализация класса считывающего данные в файл .csv
         reader = csv.reader(f)
-        i = 0
+        # цикл проходящий по всем строкам файла
         for row in reader:
-            voltage = np.arange(0, 2.501, 0.001)
-            w = int(float(row[0]))
-            b1 = int(float(row[1]))
-            b2 = int(float(row[2]))
-            current = np.array(row[3:], dtype='float')
-            end = len(current)
-            draw_graphic(voltage[:end], current, w, b1, b2)
+            w = int(float(row[0]))  # получения значения ширины ямы
+            b1 = int(float(row[1]))  # получения значения ширины первого барьера
+            b2 = int(float(row[2]))  # получения значения ширины второго барьера
+            current = np.array(row[3:], dtype='float')  # получения вектора значениями проницаемости структуры
+            # построение изначального графика ВАХ
+            draw_graphic(voltage[:len(current)], current, w, b1, b2)
+            # получение точек минимумов и максимумов
             min_points, max_points = get_min_max_points(current)
-            # plt.plot(v, current)
-            # plt.plot(v[max_points], current[max_points], 'x', color='red')
-            # plt.plot(v[min_points], current[min_points],'x' , color='green')
-            # plt.grid()
-            # plt.savefig(f'pictures/test/{w}_{b1}_{b2}.jpg')
-            # plt.show()
-            min_point = min_points[1]
-            max_point = max_points[0]
+            min_point = min_points[1]  # точка пикового тока
+            max_point = max_points[0]  # точка минимума после ОДП
+            # получение последнего значения тока, чтобы избавиться от лишних значений тока
             end_value = find_end_point(
                 current[min_point],
                 current[max_point],
                 current[min_point:max_points[1]]
             )
-            end_point = np.where(current == end_value)
-            if end_point[0] < len(current):
-                current = current[:int(end_point[0]) + 1]
-                voltage = voltage[:int(end_point[0]) + 1]
+            end_point = np.where(current == end_value)[0]  # нахождение индекса с полученным конечным значеним
+            # получение векторов тока и напряжения до конечной точки
+            if end_point < len(current):
+                current = current[:int(end_point) + 1]
+                cur_voltage = voltage[:int(end_point) + 1]
+            else:
+                cur_voltage = voltage
+            # нахождение точки, лежашую слева в 15% от точки с пиковым током
             point_15 = int(np.where(current == get_15_point(current[:max_point + 1], current[max_point]))[0])
-            draw_graphic(voltage, current, w, b1, b2, max_point, point_15)
+            # построение обновленного графика ВАХ
+            draw_graphic(cur_voltage, current, w, b1, b2, max_point, point_15)
+            # нормализация 85% отрезка от пика тока и напряжения
             normalized_current = normalize_data(current[0:point_15])
-            normalized_voltage = normalize_data(voltage[0:point_15])
+            normalized_voltage = normalize_data(cur_voltage[0:point_15])
+            # построение графика нормализованного ВАХ
             draw_graphic(normalized_voltage, normalized_current, w, b1, b2, flag=True)
+            # запись нормализованного вектора тока с параметрами струтуры в файл
             writer.writerow(np.concatenate((np.array([w, b1, b2]), normalized_current)))
-            i += 1
-
