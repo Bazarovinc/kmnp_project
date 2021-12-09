@@ -26,3 +26,16 @@ def get_min_max_points(vector: np.ndarray) -> Tuple[List[int], List[int]]:
     mins = df[df['min'].notnull() == True].index.to_list()
     maxs = df[df['max'].notnull() == True].index.to_list()
     return mins, maxs
+
+
+def find_end_point(min_point: float, max_point: float, array: np.ndarray) -> float:
+    """Функция для нахождения конечного значения тока, чтобы в дальнейшем обрезать график.
+    Нужная для построения красивого графика ВАХ"""
+    half = (max_point - min_point) * 0.6
+    point = (np.abs(array - (min_point + half))).argmin()
+    return array[point]
+
+
+def get_15_point(current: np.ndarray, max_point: float) -> float:
+    """Функция для нахождения значения тока, лежащей в 15% слева от пикового значения тока"""
+    return current[(np.abs(current - (max_point * 0.85))).argmin()]

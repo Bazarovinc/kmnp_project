@@ -4,7 +4,7 @@ from typing import Optional  # библиотека подсказок типо�
 import matplotlib.pyplot as plt  # библиотека для построения графиков (в данном случае двумерных)
 import numpy as np  # библиотека работающая с векторами
 # импорт функции для получения точек минимумов и максимумов и функции для нормализации вектора
-from utils import get_min_max_points, normalize_data
+from utils import get_min_max_points, normalize_data, get_15_point, find_end_point
 
 # инициализация вектора со значениями напряжения
 voltage = np.arange(0, 2.501, 0.001)
@@ -21,7 +21,7 @@ def draw_graphic(
         flag: bool = False,
 ) -> None:
     """Функция для построения графика ВАХ"""
-    plt.plot(v, i)  # построение графиика ВАХ
+    plt.plot(v, i)  # построение графика ВАХ
     # подпись графика (названия)
     if w and b1 and b2 and max_point:
         plt.title(f'ВАХ (w={w}, b1={b1}, b2={b2})нм')
@@ -35,11 +35,11 @@ def draw_graphic(
     # отмечаем точку в 15% от пика
     if point_15:
         plt.plot(v[point_15], i[point_15], 'x', color='green', label='15% от пика')
-    # отображние подписей на графике
+    # отображение подписей на графике
     if max_point or point_15:
         plt.legend()
-    plt.grid()   # включеиние сетки
-    plt.xlabel('U')  # подпись оси абцисс
+    plt.grid()   # включение сетки
+    plt.xlabel('U')  # подпись оси абсцисс
     plt.ylabel('I')  # подпись оси ординат
     # сохранение графика
     if w and b1 and b2 and max_point and point_15:
@@ -49,19 +49,6 @@ def draw_graphic(
     elif flag and w and b1 and b2 and not max_point:
         plt.savefig(f'pictures/normalized_cvc/{w}_{b1}_{b2}.jpg')
     plt.show()  # отображение графика
-
-
-def find_end_point(min_point: float, max_point: float, array: np.ndarray) -> float:
-    """Функция для нахождения конечного значения тока, чтобы в дальнейшем обрезать график.
-    Нужная для построения красивого графика ВАХ"""
-    half = (max_point - min_point) * 0.6
-    point = (np.abs(array - (min_point + half))).argmin()
-    return array[point]
-
-
-def get_15_point(current: np.ndarray, max_point: float) -> float:
-    """Функция для нахождения значения тока, лежашей в 15% слева от пикового значения тока"""
-    return current[(np.abs(current - (max_point * 0.85))).argmin()]
 
 
 if __name__ == '__main__':
@@ -84,19 +71,22 @@ if __name__ == '__main__':
             min_point = min_points[1]  # точка пикового тока
             max_point = max_points[0]  # точка минимума после ОДП
             # получение последнего значения тока, чтобы избавиться от лишних значений тока
-            end_value = find_end_point(
-                current[min_point],
-                current[max_point],
-                current[min_point:max_points[1]]
-            )
-            end_point = np.where(current == end_value)[0]  # нахождение индекса с полученным конечным значеним
+            if len(max_points) >= 2:
+                end_value = find_end_point(
+                    current[min_point],
+                    current[max_point],
+                    current[min_point:max_points[1]]
+                )
+                end_point = np.where(current == end_value)[0]  # нахождение индекса с полученным конечным значением
+            else:
+                end_point = max_point + int((min_point - max_point) / 2)
             # получение векторов тока и напряжения до конечной точки
             if end_point < len(current):
                 current = current[:int(end_point) + 1]
                 cur_voltage = voltage[:int(end_point) + 1]
             else:
                 cur_voltage = voltage
-            # нахождение точки, лежашую слева в 15% от точки с пиковым током
+            # нахождение точки, лежащую слева в 15% от точки с пиковым током
             point_15 = int(np.where(current == get_15_point(current[:max_point + 1], current[max_point]))[0])
             # построение обновленного графика ВАХ
             draw_graphic(cur_voltage, current, w, b1, b2, max_point, point_15)
@@ -105,5 +95,5 @@ if __name__ == '__main__':
             normalized_voltage = normalize_data(cur_voltage[0:point_15])
             # построение графика нормализованного ВАХ
             draw_graphic(normalized_voltage, normalized_current, w, b1, b2, flag=True)
-            # запись нормализованного вектора тока с параметрами струтуры в файл
+            # запись нормализованного вектора тока с параметрами структуры в файл
             writer.writerow(np.concatenate((np.array([w, b1, b2]), normalized_current)))

@@ -1,4 +1,4 @@
-from typing import List, Tuple  # библиотека подсказок типов
+from typing import List, Tuple, Optional  # библиотека подсказок типов
 
 import numpy as np
 import plotly.graph_objects as go  # библиотека для построения графиков (в данном случае трехмерных)
@@ -10,11 +10,12 @@ from utils import normalize_data  # импорт функции нормализ
 
 
 class DiffModel(BaseModel):
-    diff: float
-    diff_type: str
-    w: int
-    b1: int
-    b2: int
+    """Класс модели разности"""
+    diff: float  # поле для разности двух ВАХ
+    diff_type: str  # поле для названия разности
+    w: int  # поле для ширины ямы
+    b1: int  # поле для ширины первого барьера
+    b2: int  # поле для ширины второго барьера
 
 
 def draw_graphics(
@@ -27,20 +28,20 @@ def draw_graphics(
         depend_type: str,
 ) -> None:
     """Функция построения двух графиков ВАХ: желаемого и полученного"""
-    plt.plot(v, current, 'x-')  # построение полученного графиика ВАХ
-    plt.plot(v, need_current, 'x-', color='red', label=depend_type)  # построение желаемого графиика ВАХ
+    plt.plot(v, current)  # построение полученного графика ВАХ
+    plt.plot(v, need_current, color='red', label=depend_type)  # построение желаемого графика ВАХ
     plt.title(f'ВАХ ДБКС с (w={w}, b1={b1}, b2={b2})нм')  # подпись графика (названия)
-    plt.xlabel('U')  # подпись оси абцисс
+    plt.xlabel('U')  # подпись оси абсцисс
     plt.ylabel('I')  # подпись оси ординат
-    plt.legend()  # отображние подписей на графике
-    plt.grid()  # включеиние сетки
+    plt.legend()  # отображение подписей на графике
+    plt.grid()  # включение сетки
     plt.savefig(f'pictures/diff/{depend_type}/{w}_{b1}_{b2}.jpg')  # сохранение графика
     plt.show()  # отображение графика
 
 
 def simpson(y: np.ndarray, n: int) -> float:
-    """Функция реализующая метод Симпсона (вычисление интеграла (площади под граффиком))"""
-    h = (y[-1] - y[0]) / n  # вычисление шага
+    """Функция реализующая метод Симпсона (вычисление интеграла (площади под графиком))"""
+    h = (y[-1] - y[0]) / n
     y_0 = y[0]
     y_n = y[-1]
     s = 0
@@ -55,7 +56,8 @@ def draw_3d(
         s: np.ndarray,
         depend_type: str,
         x_name: str,
-        y_name: str
+        y_name: str,
+        text: str = ''
 ) -> None:
     fig = go.Figure(data=go.Scatter3d(
         x=p1,
@@ -78,7 +80,7 @@ def draw_3d(
             yaxis_title=y_name + ', нм',
             zaxis_title='S'
         ),
-        title=f'Зависимость интегрального расхождения от {x_name} и {y_name} {depend_type}'
+        title=f'Зависимость интегрального расхождения от {x_name} и {y_name} {depend_type} ({text})'
     )
     fig.show()
     fig = go.Figure(data=go.Scatter3d(
@@ -100,7 +102,7 @@ def draw_3d(
             yaxis_title=y_name + ', нм',
             zaxis_title='S',
         ),
-        title=f'Зависимость интегрального расхождения от {x_name} и {y_name} {depend_type}'
+        title=f'Зависимость интегрального расхождения от {x_name} и {y_name} {depend_type} ({text})'
     )
     fig.show()
 
@@ -133,7 +135,8 @@ def dif(current_1: np.ndarray, current_2: np.ndarray) -> float:
 def get_integral_difference(
         rows: list,
         depend_type: str,
-        depend_func
+        depend_func,
+        flag: bool
 ) -> Tuple[DiffModel, DiffModel]:
     w_list = []  # инициализация списка ширин ям
     b1_list = []  # инициализация списка ширин первых барьеров
@@ -160,7 +163,7 @@ def get_integral_difference(
         draw_graphics(current, n_voltage, n_current, w, b1, b2, depend_type)
         i += 1
     # сортировка списков ширин ям, барьеров, по значениям интегральной разности для дальнейшего вывода
-    # характеристик подходящей стрктуры
+    # характеристик подходящей структуры
     s_sorted, w_sorted, b1_sorted, b2_sorted = sort_lists(s_dict, w_list, b1_list, b2_list)
     # запись результатов в модель
     s_diff = DiffModel(
@@ -170,8 +173,39 @@ def get_integral_difference(
         b1=b1_sorted[0],
         b2=b2_sorted[0]
     )
+    if flag:
+        for i in range(11, 20):
+            need_w = []
+            need_b1 = []
+            need_b2 = []
+            for j in range(len(s_sorted)):
+                print(w_sorted[j], b1_sorted[j], b2_sorted[j])
+                if w_sorted[j] == i:
+                    need_w.append(j)
+                if b1_sorted[j] == i:
+                    need_b1.append(j)
+                if b2_sorted[j] == i:
+                    need_b2.append(j)
+            draw_3d(b2_sorted[need_w], b1_sorted[need_w], s_sorted[need_w], depend_type, 'b2', 'b1', f'w={i}')
+            draw_3d(b1_sorted[need_b2], w_sorted[need_b2], s_sorted[need_b2], depend_type, 'b1', 'w', f'b2={i}')
+            draw_3d(b2_sorted[need_b1], w_sorted[need_b1], s_sorted[need_b1], depend_type, 'b2', 'w', f'b1={i}')
+    else:
+        need_w = []
+        need_b1 = []
+        need_b2 = []
+        for i in range(len(s_sorted)):
+            if w_sorted[i] == s_diff.w:
+                need_w.append(i)
+            if b1_sorted[i] == s_diff.b1:
+                need_b1.append(i)
+            if b2_sorted[i] == s_diff.b2:
+                need_b2.append(i)
+        draw_3d(b2_sorted[need_w], b1_sorted[need_w], s_sorted[need_w], depend_type, 'b2', 'b1', f'w={s_diff.w}')
+        draw_3d(b1_sorted[need_b2], w_sorted[need_b2], s_sorted[need_b2], depend_type, 'b1', 'w', f'b2={s_diff.b2}')
+        draw_3d(b2_sorted[need_b1], w_sorted[need_b1], s_sorted[need_b1], depend_type, 'b2', 'w', f'b1={s_diff.b1}')
+
     # сортировка списков ширин ям, барьеров, по значениям сумм разностей для дальнейшего вывода
-    # характеристик подходящей стрктуры
+    # характеристик подходящей структуры
     diff_sorted, w_sorted, b1_sorted, b2_sorted = sort_lists(diff_dict, w_list, b1_list, b2_list)
     # запись результатов в модель
     diff = DiffModel(
@@ -181,16 +215,4 @@ def get_integral_difference(
         b1=b1_sorted[0],
         b2=b2_sorted[0]
     )
-    # new = []
-    # b1_l = []
-    # for i in range(len(w_sorted)):
-    #     if w_sorted[i] == 10:
-    #         new.append(i)
-    # s_sorted_10 = s_sorted[new]
-    # b1_sorted_10 = b1_sorted[new]
-    # b2_sorted_10 = b2_sorted[new]
-    # draw_3d(b2_sorted_10, b1_sorted_10, s_sorted_10, depend_type, 'b2', 'b1')
-    # draw_3d(w_sorted, b1_sorted, s_sorted, depend_type, 'w', 'b1')
-    # draw_3d(w_sorted, b2_sorted, s_sorted, depend_type, 'w', 'b2')
-    # draw_3d(b1_sorted, b2_sorted, s_sorted, depend_type, 'b1', 'b2')
     return s_diff, diff
