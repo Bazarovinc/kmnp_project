@@ -11,7 +11,7 @@ from utils import normalize_data  # импорт функции нормализ
 
 class DiffModel(BaseModel):
     """Класс модели разности"""
-    diff: float  # поле для разности двух ВАХ
+    diff: List[float]  # поле для разности двух ВАХ
     diff_type: str  # поле для названия разности
     w: int  # поле для ширины ямы
     b1: int  # поле для ширины первого барьера
@@ -107,6 +107,10 @@ def draw_3d(
     fig.show()
 
 
+def mse(y: np.ndarray, e: np.ndarray) -> float:
+    return np.sum(np.power(y - e, 2)) / len(y)
+
+
 def sort_lists(
         s: dict,
         w: List[float],
@@ -118,7 +122,7 @@ def sort_lists(
     new_b1 = []
     new_w = []
     new_b2 = []
-    s = dict(sorted(s.items(), key=lambda item: item[1]))
+    s = dict(sorted(s.items(), key=lambda item: (item[1][0], -item[1][1])))
     for k, v in s.items():
         new_s.append(v)
         new_w.append(w[k])
@@ -152,64 +156,66 @@ def get_integral_difference(
         w_list.append(w)  # добавление ширины ямы в массив
         b1_list.append(b1)  # добавление ширины первого барьера в массив
         b2_list.append(b2)  # добавление ширины второго барьера в массив
-        current = np.array(row[3:], dtype='float')  # получения вектора значениями проницаемости структуры
+        current = np.array(row[3:], dtype='float')  # получения вектора значениями тока структуры
         n_voltage = normalize_data(voltage[:len(current)])  # получение нормализованного значения напряжения
         n_current = depend_func(n_voltage)  # получение вектора значений тока для необходимой функции
         # добавление в словарь суммы разностей между желаемыми значениями тока и полученными для структуры
-        diff_dict[i] = dif(current, n_current)
+        diff_dict[i] = mse(current, n_current)
         # добавление в словарь интегральной разности между желаемыми значениями тока и полученными для структуры
         s_dict[i] = np.abs(simpson(current, len(current)) - simpson(n_current, len(n_current)))
+        s_dict[i] = (np.abs(simpson(current, len(current)) - simpson(n_current, len(n_current))), mse(current, n_current))
         # построение графиков желаемой и полученной ВАХ
-        draw_graphics(current, n_voltage, n_current, w, b1, b2, depend_type)
+        #draw_graphics(current, n_voltage, n_current, w, b1, b2, depend_type)
         i += 1
     # сортировка списков ширин ям, барьеров, по значениям интегральной разности для дальнейшего вывода
     # характеристик подходящей структуры
     s_sorted, w_sorted, b1_sorted, b2_sorted = sort_lists(s_dict, w_list, b1_list, b2_list)
     # запись результатов в модель
     s_diff = DiffModel(
-        diff=s_sorted[0],
+        diff=list(s_sorted[0]),
         diff_type='Интегральная разность',
         w=w_sorted[0],
         b1=b1_sorted[0],
         b2=b2_sorted[0]
     )
-    if flag:
-        for i in range(11, 20):
-            need_w = []
-            need_b1 = []
-            need_b2 = []
-            for j in range(len(s_sorted)):
-                print(w_sorted[j], b1_sorted[j], b2_sorted[j])
-                if w_sorted[j] == i:
-                    need_w.append(j)
-                if b1_sorted[j] == i:
-                    need_b1.append(j)
-                if b2_sorted[j] == i:
-                    need_b2.append(j)
-            draw_3d(b2_sorted[need_w], b1_sorted[need_w], s_sorted[need_w], depend_type, 'b2', 'b1', f'w={i}')
-            draw_3d(b1_sorted[need_b2], w_sorted[need_b2], s_sorted[need_b2], depend_type, 'b1', 'w', f'b2={i}')
-            draw_3d(b2_sorted[need_b1], w_sorted[need_b1], s_sorted[need_b1], depend_type, 'b2', 'w', f'b1={i}')
-    else:
-        need_w = []
-        need_b1 = []
-        need_b2 = []
-        for i in range(len(s_sorted)):
-            if w_sorted[i] == s_diff.w:
-                need_w.append(i)
-            if b1_sorted[i] == s_diff.b1:
-                need_b1.append(i)
-            if b2_sorted[i] == s_diff.b2:
-                need_b2.append(i)
-        draw_3d(b2_sorted[need_w], b1_sorted[need_w], s_sorted[need_w], depend_type, 'b2', 'b1', f'w={s_diff.w}')
-        draw_3d(b1_sorted[need_b2], w_sorted[need_b2], s_sorted[need_b2], depend_type, 'b1', 'w', f'b2={s_diff.b2}')
-        draw_3d(b2_sorted[need_b1], w_sorted[need_b1], s_sorted[need_b1], depend_type, 'b2', 'w', f'b1={s_diff.b1}')
+    # if flag:
+    #     for i in range(11, 20):
+    #         need_w = []
+    #         need_b1 = []
+    #         need_b2 = []
+    #         for j in range(len(s_sorted)):
+    #             print(w_sorted[j], b1_sorted[j], b2_sorted[j])
+    #             if w_sorted[j] == i:
+    #                 need_w.append(j)
+    #             if b1_sorted[j] == i:
+    #                 need_b1.append(j)
+    #             if b2_sorted[j] == i:
+    #                 need_b2.append(j)
+    #         draw_3d(b2_sorted[need_w], b1_sorted[need_w], s_sorted[need_w], depend_type, 'b2', 'b1', f'w={i}')
+    #         draw_3d(b1_sorted[need_b2], w_sorted[need_b2], s_sorted[need_b2], depend_type, 'b1', 'w', f'b2={i}')
+    #         draw_3d(b2_sorted[need_b1], w_sorted[need_b1], s_sorted[need_b1], depend_type, 'b2', 'w', f'b1={i}')
+    # else:
+    #     need_w = []
+    #     need_b1 = []
+    #     need_b2 = []
+    #     for i in range(len(s_sorted)):
+    #         if w_sorted[i] == s_diff.w:
+    #             need_w.append(i)
+    #         if b1_sorted[i] == s_diff.b1:
+    #             need_b1.append(i)
+    #         if b2_sorted[i] == s_diff.b2:
+    #             need_b2.append(i)
+    #     draw_3d(b2_sorted[need_w], b1_sorted[need_w], s_sorted[need_w], depend_type, 'b2', 'b1', f'w={s_diff.w}')
+    #     draw_3d(b1_sorted[need_b2], w_sorted[need_b2], s_sorted[need_b2], depend_type, 'b1', 'w', f'b2={s_diff.b2}')
+    #     draw_3d(b2_sorted[need_b1], w_sorted[need_b1], s_sorted[need_b1], depend_type, 'b2', 'w', f'b1={s_diff.b1}')
 
     # сортировка списков ширин ям, барьеров, по значениям сумм разностей для дальнейшего вывода
     # характеристик подходящей структуры
-    diff_sorted, w_sorted, b1_sorted, b2_sorted = sort_lists(diff_dict, w_list, b1_list, b2_list)
+    #diff_sorted, w_sorted, b1_sorted, b2_sorted = sort_lists(diff_dict, w_list, b1_list, b2_list)
     # запись результатов в модель
     diff = DiffModel(
-        diff=diff_sorted[0],
+        diff=[0.1, 0.01],
+        #diff=diff_sorted[0],
         diff_type='Сумма разностей',
         w=w_sorted[0],
         b1=b1_sorted[0],
